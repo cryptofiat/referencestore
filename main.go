@@ -26,9 +26,11 @@ func main() {
 	log.Fatal(http.ListenAndServe(*listen, store))
 }
 
-type Reference [32]byte
+const HashLength = 32
 
-func ParseReference(s string) (r Reference, err error) {
+type Hash [HashLength]byte
+
+func ParseHash(s string) (r Hash, err error) {
 	data, err := hex.DecodeString(s)
 	if err != nil {
 		return r, err
@@ -36,13 +38,13 @@ func ParseReference(s string) (r Reference, err error) {
 	copy(r[:], data)
 	return r, nil
 }
-func (ref *Reference) Hex() string {
+func (ref *Hash) Hex() string {
 	return hex.EncodeToString(ref[:])
 }
 
 type Blob []byte
 
-func GenerateReference() (ref Reference) {
+func GenerateHash() (ref Hash) {
 	_, err := io.ReadFull(rand.Reader, ref[:])
 	if err != nil {
 		panic(err)
@@ -52,13 +54,13 @@ func GenerateReference() (ref Reference) {
 
 type Store struct {
 	mu    sync.Mutex
-	blobs map[Reference]Blob
+	blobs map[Hash]Blob
 }
 
 func NewStore() *Store {
 	return &Store{
 		mu:    sync.Mutex{},
-		blobs: make(map[Reference]Blob),
+		blobs: make(map[Hash]Blob),
 	}
 }
 
@@ -67,20 +69,20 @@ func (store *Store) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	case http.MethodGet:
-		hx := r.URL.Path[1:]
+		hex := r.URL.Path[1:]
 
-		ref, err := ParseReference(hx)
+		txhash, err := ParseHash(hex)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid reference %s", hx), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Invalid transaction hash %s", hex), http.StatusBadRequest)
 			return
 		}
 
 		store.mu.Lock()
-		blob, ok := store.blobs[ref]
+		blob, ok := store.blobs[txhash]
 		store.mu.Unlock()
 
 		if !ok {
-			http.Error(w, fmt.Sprintf("Reference %s missing", hx), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Transaction %s does not contain data", hex), http.StatusNotFound)
 			return
 		}
 
@@ -88,7 +90,13 @@ func (store *Store) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 	case http.MethodPost:
-		ref := GenerateReference()
+		hex := r.URL.Path[1:]
+
+		txhash, err := ParseHash(hex)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid transaction hash %s", hex), http.StatusBadRequest)
+			return
+		}
 
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -98,9 +106,14 @@ func (store *Store) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		store.mu.Lock()
-		defer store.mu.Unlock()
-		if _, err := w.Write([]byte(ref.Hex())); err == nil {
-			store.blobs[ref] = data
+		_, exists := store.blobs[txhash]
+		if !exists {
+			store.blobs[txhash] = data
+		}
+		store.mu.Unlock()
+
+		if exists {
+			http.Error(w, "Transaction hash already stores data", http.StatusConflict)
 		}
 	}
 }
