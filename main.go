@@ -32,6 +32,7 @@ func main() {
 }
 
 const HashLength = 32
+const MaxPostSize = 1000000 // 1MB
 
 type Hash [HashLength]byte
 
@@ -86,7 +87,7 @@ func (store *Store) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		data, err := ioutil.ReadAll(r.Body)
+		data, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, MaxPostSize))
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "Failed to receive data.", http.StatusBadRequest)
