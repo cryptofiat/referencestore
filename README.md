@@ -1,6 +1,7 @@
-# referencestore
-Server for storing transfer reference values by blockchain transaction reference.
-The information in the transfer reference should only be visible to the sender and the receiver.
+# transfer-info
+
+transfer-info implements a server for storing transfer information by blockchain transaction hash.
+The information in the transfer info should only be visible to the sender and the receiver.
 
 ## Install
 
