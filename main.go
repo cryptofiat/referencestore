@@ -8,8 +8,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/rs/cors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
@@ -29,8 +29,7 @@ func main() {
 	store := NewStore(db)
 
 	log.Printf("Starting server on %s\n", *listen)
-	log.Fatal(http.ListenAndServe(*listen, cors.Default().Handler(store) ))
-	//log.Fatal(http.ListenAndServe(*listen, store ))
+	log.Fatal(http.ListenAndServe(*listen, cors.Default().Handler(store)))
 }
 
 const HashLength = 32
