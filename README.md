@@ -12,7 +12,7 @@ The information in the transfer info should only be visible to the sender and th
 ## Example
 
 ```bash
-$> curl -X POST -d "Hello world!" http://localhost:8000/7ab54344ab99f90caae7eaa18588b563b2c495286f90a34db2bf19368601e3d8
+$> curl -X POST -d 'Hello world!' http://localhost:8000/7ab54344ab99f90caae7eaa18588b563b2c495286f90a34db2bf19368601e3d8
 ```
 
 ```bash
