@@ -76,6 +76,8 @@ func (store *Store) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		w.Header().Set("Cache-Control", "max-age=3600")
+
 		if _, err := w.Write(blob); err != nil {
 			log.Println(err)
 		}
