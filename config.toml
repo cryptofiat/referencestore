@@ -1,0 +1,12 @@
+[HTTP]
+listen=":8000"
+
+[Postgres]
+user="transferinfo"
+password="q1w2e3r4"
+dbname="transfer-info"
+host="localhost"
+port=5432
+
+[LevelDB]
+dir="data"
