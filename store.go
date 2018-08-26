@@ -5,8 +5,10 @@ import (
 	"errors"
 )
 
-const HashLength = 32
-const MaxPostSize = 1000000 // 1MB
+const (
+	HashLength  = 32
+	MaxPostSize = 1000000 // 1MB
+)
 
 type Hash [HashLength]byte
 

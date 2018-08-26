@@ -7,7 +7,7 @@ import (
 )
 
 type LevelDB struct {
-	DB *leveldb.DB
+	db *leveldb.DB
 }
 
 func NewLevelDB(path string) (*LevelDB, error) {
@@ -16,15 +16,15 @@ func NewLevelDB(path string) (*LevelDB, error) {
 }
 
 func (store *LevelDB) Close() error {
-	return store.DB.Close()
+	return store.db.Close()
 }
 
 func (store *LevelDB) Get(txhash Hash) ([]byte, error) {
-	return store.DB.Get(txhash[:], nil)
+	return store.db.Get(txhash[:], nil)
 }
 
 func (store *LevelDB) Put(txhash Hash, data []byte) error {
-	tx, err := store.DB.OpenTransaction()
+	tx, err := store.db.OpenTransaction()
 	if err != nil {
 		return fmt.Errorf("Problem starting DB transaction: %v", err)
 	}
