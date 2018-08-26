@@ -13,7 +13,7 @@ type LevelDB struct {
 }
 
 func NewLevelDB(path string) (*LevelDB, error) {
-	db, err := leveldb.OpenFile(*dbfile, nil)
+	db, err := leveldb.OpenFile(path, nil)
 	return &LevelDB{db}, err
 }
 
@@ -22,7 +22,11 @@ func (store *LevelDB) Close() error {
 }
 
 func (store *LevelDB) Get(txhash Hash) ([]byte, error) {
-	return store.db.Get(txhash[:], nil)
+	data, err := store.db.Get(txhash[:], nil)
+	if err == leveldb.ErrNotFound {
+		err = ErrNotFound
+	}
+	return data, err
 }
 
 func (store *LevelDB) Put(txhash Hash, data []byte) error {
