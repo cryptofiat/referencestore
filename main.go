@@ -4,6 +4,8 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/rs/cors"
@@ -25,6 +27,27 @@ type Config struct {
 	LevelDB struct {
 		Dir string
 	}
+}
+
+func (config *Config) PostgresDSN() string {
+	dsn := []string{}
+	include := func(name, value string) {
+		if value != "" {
+			dsn = append(dsn, name+"="+value)
+		}
+	}
+	p := &config.Postgres
+	include("user", p.User)
+	include("password", p.Password)
+	include("dbname", p.DBName)
+	include("host", p.Host)
+	if p.Port == 0 {
+		include("port", "5432")
+	} else {
+		include("port", strconv.Itoa(p.Port))
+	}
+
+	return strings.Join(dsn, " ")
 }
 
 var (
@@ -50,15 +73,50 @@ func main() {
 		config.LevelDB.Dir = "data"
 	}
 
+	if flag.Arg(0) == "migrate" {
+		log.Println("Migrating")
+		log.Println("LevelDB: ", config.LevelDB.Dir)
+		ldb, err := NewLevelDB(config.LevelDB.Dir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer ldb.Close()
+
+		dsn := config.PostgresDSN()
+		log.Println("Postgres: ", dsn)
+		pgdb, err := NewPostgresDB(dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer pgdb.Close()
+
+		if err := pgdb.MigrateFrom(ldb); err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println("Migration complete")
+		return
+	}
+
 	var store Store
 
-	ldb, err := NewLevelDB(config.LevelDB.Dir)
-	if err != nil {
-		log.Fatal(err)
+	if dsn := config.PostgresDSN(); dsn != "" {
+		log.Println("Postgres: ", dsn)
+		pgdb, err := NewPostgresDB(dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer pgdb.Close()
+		store = pgdb
+	} else {
+		log.Println("LevelDB: ", config.LevelDB.Dir)
+		ldb, err := NewLevelDB(config.LevelDB.Dir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer ldb.Close()
+		store = ldb
 	}
-	defer ldb.Close()
-
-	store = ldb
 
 	server := NewServer(store)
 
