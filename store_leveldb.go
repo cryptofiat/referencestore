@@ -29,6 +29,24 @@ func (store *LevelDB) Get(txhash Hash) ([]byte, error) {
 	return data, err
 }
 
+func (store *LevelDB) List(fn func(Hash, []byte) error) error {
+	iter := store.db.NewIterator(nil, nil)
+	defer iter.Release()
+	for iter.Next() {
+		key, value := iter.Key(), iter.Value()
+
+		var txhash Hash
+		if n := copy(txhash[:], key); n != HashLength {
+			return ErrInvalidHash
+		}
+
+		if err := fn(txhash, value); err != nil {
+			return err
+		}
+	}
+	return iter.Error()
+}
+
 func (store *LevelDB) Put(txhash Hash, data []byte) error {
 	tx, err := store.db.OpenTransaction()
 	if err != nil {

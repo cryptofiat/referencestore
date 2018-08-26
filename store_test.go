@@ -94,4 +94,19 @@ func testStore(t *testing.T, store Store) {
 			t.Fatalf("invalid get 0: %v", err)
 		}
 	}
+
+	{
+		found := make(map[Hash]bool)
+		err := store.List(func(h Hash, data []byte) error {
+			found[h] = true
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !found[Hash{1}] || !found[Hash{2}] {
+			t.Fatalf("only got: %v", found)
+		}
+	}
 }

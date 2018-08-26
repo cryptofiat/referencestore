@@ -65,6 +65,38 @@ func (store *PostgresDB) DESTROY_INFO() error {
 		return err
 	})
 }
+
+func (store *PostgresDB) List(fn func(Hash, []byte) error) error {
+	return store.do(func(conn *pgx.Conn) error {
+		rows, err := conn.Query(`SELECT Hash, Data FROM Info`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var h []byte
+			var data []byte
+
+			err := rows.Scan(&h, &data)
+			if err != nil {
+				return err
+			}
+
+			var txhash Hash
+			if copy(txhash[:], h) != HashLength {
+				return ErrInvalidHash
+			}
+
+			if err := fn(txhash, data); err != nil {
+				return err
+			}
+		}
+
+		return err
+	})
+}
+
 func (store *PostgresDB) Put(txhash Hash, data []byte) error {
 	return store.do(func(conn *pgx.Conn) error {
 		_, err := conn.Exec(`
@@ -92,4 +124,25 @@ func (store *PostgresDB) Get(txhash Hash) ([]byte, error) {
 		return err
 	})
 	return data, err
+}
+
+func (store *PostgresDB) MigrateFrom(source Store) error {
+	return store.do(func(conn *pgx.Conn) error {
+		tx, err := conn.Begin()
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+
+		err = source.List(func(txhash Hash, data []byte) error {
+			_, err := tx.Exec(`INSERT INTO Info(Hash, Data) VALUES ($1, $2)`, txhash[:], data)
+			return err
+		})
+
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit()
+	})
 }

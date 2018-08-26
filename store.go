@@ -25,11 +25,13 @@ func (ref *Hash) Hex() string {
 }
 
 type Store interface {
+	List(fn func(Hash, []byte) error) error
 	Put(h Hash, data []byte) error
 	Get(h Hash) ([]byte, error)
 }
 
 var (
-	ErrNotFound = errors.New("reference-info not found")
-	ErrExists   = errors.New("reference-info already exists")
+	ErrInvalidHash = errors.New("invalid hash")
+	ErrNotFound    = errors.New("reference-info not found")
+	ErrExists      = errors.New("reference-info already exists")
 )
