@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -47,9 +48,13 @@ func testStore(t *testing.T, store Store) {
 }
 
 func TestLevelDB(t *testing.T) {
-	defer os.RemoveAll("temp")
+	tempdir, err := ioutil.TempDir("", "transfer-info-leveldb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempdir)
 
-	store, err := NewLevelDB("temp")
+	store, err := NewLevelDB(tempdir)
 	if err != nil {
 		t.Fatalf("init: %v", err)
 	}
