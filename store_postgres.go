@@ -30,6 +30,11 @@ func NewPostgresDB(params string) (*PostgresDB, error) {
 	return store, store.init()
 }
 
+func (store *PostgresDB) Close() error {
+	store.pool.Close()
+	return nil
+}
+
 func (store *PostgresDB) do(fn func(conn *pgx.Conn) error) error {
 	conn, err := store.pool.Acquire()
 	if err != nil {
