@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+var testPostgres = flag.String("postgres-test-db", "", "postgres test database")
+
 func TestLevelDB(t *testing.T) {
 	store, cleanup := newTestLevelDB(t)
 	defer cleanup()
@@ -136,11 +138,9 @@ func newTestLevelDB(t *testing.T) (store *LevelDB, cleanup func()) {
 	}
 }
 
-var testPostgres = flag.String("postgres-test-db", "", "postgres test database")
-
 func newTestPostgres(t *testing.T) (store *PostgresDB, cleanup func()) {
 	if *testPostgres == "" {
-		t.Skip("-postgres-test-db not provided")
+		t.Skip(`postgres flag missing, example:` + "\n" + `-postgres-test-db="user=transferinfo password=q1w2e3r4 dbname=transfer-info"`)
 	}
 
 	pgdb, err := NewPostgresDB(*testPostgres)
