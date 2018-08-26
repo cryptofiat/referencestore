@@ -9,50 +9,14 @@ import (
 )
 
 func TestLevelDB(t *testing.T) {
-	tempdir, err := ioutil.TempDir("", "transfer-info-leveldb")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempdir)
-
-	store, err := NewLevelDB(tempdir)
-	if err != nil {
-		t.Fatalf("init: %v", err)
-	}
-	defer func() {
-		err := store.Close()
-		if err != nil {
-			t.Fatalf("close: %v", err)
-		}
-	}()
-
+	store, cleanup := newTestLevelDB(t)
+	defer cleanup()
 	testStore(t, store)
 }
 
-var testPostgres = flag.String("postgres-test-db", "", "postgres test database")
-
 func TestPostgresDB(t *testing.T) {
-	if *testPostgres == "" {
-		t.Skip("-postgres-test-db not provided")
-	}
-
-	store, err := NewPostgresDB(*testPostgres)
-	if err != nil {
-		t.Fatalf("init: %v", err)
-	}
-
-	defer func() {
-		if err := store.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	defer func() {
-		if err := store.DESTROY_INFO(); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
+	store, cleanup := newTestPostgres(t)
+	defer cleanup()
 	testStore(t, store)
 }
 
@@ -107,6 +71,90 @@ func testStore(t *testing.T, store Store) {
 
 		if !found[Hash{1}] || !found[Hash{2}] {
 			t.Fatalf("only got: %v", found)
+		}
+	}
+}
+
+func TestMigration(t *testing.T) {
+	pgdb, cleanup := newTestPostgres(t)
+	defer cleanup()
+	ldb, cleanup := newTestLevelDB(t)
+	defer cleanup()
+
+	expected := map[Hash][]byte{
+		Hash{1}: []byte("hello"),
+		Hash{2}: []byte("hello"),
+	}
+
+	for key, value := range expected {
+		if err := ldb.Put(key, value); err != nil {
+			t.Fatalf("ldb insert %v: %v", key, value)
+		}
+	}
+
+	if err := pgdb.MigrateFrom(ldb); err != nil {
+		t.Fatalf("migration: %v", err)
+	}
+
+	err := pgdb.List(func(h Hash, data []byte) error {
+		expdata, ok := expected[h]
+		if !ok {
+			t.Fatalf("item %v not found", h)
+		}
+		delete(expected, h)
+
+		if !bytes.Equal(expdata, data) {
+			t.Fatalf("different data %v: %v\n%v", h, data, expdata)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("list %v:", err)
+	}
+	if len(expected) != 0 {
+		t.Fatalf("some items missing: %v", expected)
+	}
+}
+
+func newTestLevelDB(t *testing.T) (store *LevelDB, cleanup func()) {
+	tempdir, err := ioutil.TempDir("", "transfer-info-leveldb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ldb, err := NewLevelDB(tempdir)
+	if err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	return ldb, func() {
+		defer os.RemoveAll(tempdir)
+
+		err := ldb.Close()
+		if err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	}
+}
+
+var testPostgres = flag.String("postgres-test-db", "", "postgres test database")
+
+func newTestPostgres(t *testing.T) (store *PostgresDB, cleanup func()) {
+	if *testPostgres == "" {
+		t.Skip("-postgres-test-db not provided")
+	}
+
+	pgdb, err := NewPostgresDB(*testPostgres)
+	if err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	return pgdb, func() {
+		if err := pgdb.DESTROY_INFO(); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := pgdb.Close(); err != nil {
+			t.Fatal(err)
 		}
 	}
 }
