@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: circleci/golang:1.11rc2
 
-    working_directory: /transfer-info
+    working_directory: ~/transfer-info
     steps:
       - checkout
 
@@ -13,7 +13,7 @@ jobs:
             - v1-pkg-cache
 
       - run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o transfer-info
-
+ 
       - save_cache:
           key: v1-pkg-cache
           paths:
@@ -27,7 +27,7 @@ jobs:
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no transfer-info@transfer-info.euro2.ee /bin/mkdir /opt/transfer-info/builds/"${CIRCLE_BUILD_NUM}"
-              scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r  transfer-info transfer-info@transfer-info.euro2.ee:/opt/transfer-info/builds/"${CIRCLE_BUILD_NUM}"/
+              scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r  ~/transfer-info/transfer-info transfer-info@transfer-info.euro2.ee:/opt/transfer-info/builds/"${CIRCLE_BUILD_NUM}"/
               echo "cd /opt/transfer-info && /bin/ln -sf builds/"${CIRCLE_BUILD_NUM}"/transfer-info transfer-info-latest" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no transfer-info@transfer-info.euro2.ee
               ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no transfer-info@transfer-info.euro2.ee sudo /bin/systemctl restart transfer-info
             fi
