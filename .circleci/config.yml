@@ -12,6 +12,8 @@ jobs:
           keys:
             - v1-pkg-cache
 
+      - run: go get .
+
       - run: go test -v -count=1 .
 
       - run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o transfer-info
