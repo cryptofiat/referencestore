@@ -94,11 +94,15 @@ func TestMigration(t *testing.T) {
 		}
 	}
 
-	if err := pgdb.MigrateFrom(ldb); err != nil {
+	count, err := pgdb.MigrateFrom(ldb)
+	if err != nil {
 		t.Fatalf("migration: %v", err)
 	}
+	if count != 2 {
+		t.Fatalf("expected to migrate 2: %v", count)
+	}
 
-	err := pgdb.List(func(h Hash, data []byte) error {
+	err = pgdb.List(func(h Hash, data []byte) error {
 		expdata, ok := expected[h]
 		if !ok {
 			t.Fatalf("item %v not found", h)
