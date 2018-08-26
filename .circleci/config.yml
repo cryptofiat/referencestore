@@ -10,7 +10,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-pkg-cache
+            - pkg-{{ checksum "go.mod" }}
 
       - run: go get .
 
@@ -19,7 +19,7 @@ jobs:
       - run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o transfer-info
  
       - save_cache:
-          key: v1-pkg-cache
+          key: pkg-{{ checksum "go.mod" }}
           paths:
             - "/go/pkg"
 
