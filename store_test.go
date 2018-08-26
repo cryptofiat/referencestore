@@ -2,10 +2,59 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"io/ioutil"
 	"os"
 	"testing"
 )
+
+func TestLevelDB(t *testing.T) {
+	tempdir, err := ioutil.TempDir("", "transfer-info-leveldb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempdir)
+
+	store, err := NewLevelDB(tempdir)
+	if err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	defer func() {
+		err := store.Close()
+		if err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	}()
+
+	testStore(t, store)
+}
+
+var testPostgres = flag.String("postgres-test-db", "", "postgres test database")
+
+func TestPostgresDB(t *testing.T) {
+	if *testPostgres == "" {
+		t.Skip("-postgres-test-db not provided")
+	}
+
+	store, err := NewPostgresDB(*testPostgres)
+	if err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	defer func() {
+		if err := store.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	defer func() {
+		if err := store.DESTROY_INFO(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	testStore(t, store)
+}
 
 func testStore(t *testing.T, store Store) {
 	if err := store.Put(Hash{1}, []byte("hello")); err != nil {
@@ -45,25 +94,4 @@ func testStore(t *testing.T, store Store) {
 			t.Fatalf("invalid get 0: %v", err)
 		}
 	}
-}
-
-func TestLevelDB(t *testing.T) {
-	tempdir, err := ioutil.TempDir("", "transfer-info-leveldb")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempdir)
-
-	store, err := NewLevelDB(tempdir)
-	if err != nil {
-		t.Fatalf("init: %v", err)
-	}
-	defer func() {
-		err := store.Close()
-		if err != nil {
-			t.Fatalf("close: %v", err)
-		}
-	}()
-
-	testStore(t, store)
 }

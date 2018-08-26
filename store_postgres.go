@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/jackc/pgx"
 )
 
@@ -57,12 +59,21 @@ func (store *PostgresDB) init() error {
 	})
 }
 
+func (store *PostgresDB) DESTROY_INFO() error {
+	return store.do(func(conn *pgx.Conn) error {
+		_, err := conn.Exec(`DROP TABLE Info`)
+		return err
+	})
+}
 func (store *PostgresDB) Put(txhash Hash, data []byte) error {
 	return store.do(func(conn *pgx.Conn) error {
 		_, err := conn.Exec(`
 			INSERT 
 			INTO   Info(Hash, Data)
 			VALUES ($1, $2)`, txhash[:], data)
+		if err != nil && strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return ErrExists
+		}
 		return err
 	})
 }
@@ -74,7 +85,11 @@ func (store *PostgresDB) Get(txhash Hash) ([]byte, error) {
 			SELECT Data
 			FROM Info
 			WHERE Hash = $1`, txhash[:])
-		return row.Scan(&data)
+		err := row.Scan(&data)
+		if err == pgx.ErrNoRows {
+			return ErrNotFound
+		}
+		return err
 	})
 	return data, err
 }
