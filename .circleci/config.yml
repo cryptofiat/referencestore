@@ -21,7 +21,7 @@ jobs:
 
       - add_ssh_keys:
           fingerprints:
-            - ""
+            - "74:4c:1f:71:95:6a:f0:fc:8d:c7:85:4a:27:c1:3e:90"
 
       - deploy:
           command: |
