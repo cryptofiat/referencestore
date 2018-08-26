@@ -6,6 +6,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
+var _ Store = &LevelDB{}
+
 type LevelDB struct {
 	db *leveldb.DB
 }
