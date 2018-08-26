@@ -126,8 +126,9 @@ func (store *PostgresDB) Get(txhash Hash) ([]byte, error) {
 	return data, err
 }
 
-func (store *PostgresDB) MigrateFrom(source Store) error {
-	return store.do(func(conn *pgx.Conn) error {
+func (store *PostgresDB) MigrateFrom(source Store) (int, error) {
+	var count int
+	err := store.do(func(conn *pgx.Conn) error {
 		tx, err := conn.Begin()
 		if err != nil {
 			return err
@@ -135,6 +136,7 @@ func (store *PostgresDB) MigrateFrom(source Store) error {
 		defer tx.Rollback()
 
 		err = source.List(func(txhash Hash, data []byte) error {
+			count++
 			_, err := tx.Exec(`INSERT INTO Info(Hash, Data) VALUES ($1, $2)`, txhash[:], data)
 			return err
 		})
@@ -145,4 +147,5 @@ func (store *PostgresDB) MigrateFrom(source Store) error {
 
 		return tx.Commit()
 	})
+	return count, err
 }

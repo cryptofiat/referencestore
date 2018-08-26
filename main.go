@@ -90,11 +90,12 @@ func main() {
 		}
 		defer pgdb.Close()
 
-		if err := pgdb.MigrateFrom(ldb); err != nil {
+		count, err := pgdb.MigrateFrom(ldb)
+		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Println("Migration complete")
+		log.Println("Migration complete", count)
 		return
 	}
 
